@@ -48,6 +48,7 @@ std::string string_join(std::vector<string>& elements, std::string delimiter) {
 
 
 struct Document {
+	string doc_id;
     int* words;
     double* counts;
     double total;
@@ -85,8 +86,9 @@ public:
 
     	while((read=getline(&line,&len,file)) != -1) {
 			std::vector<string> s = string_split(std::string(line), " ");
-   			int length = std::stoi(s[0]);
+			int length = (int) (s.size() - 1);
 			Document* doc = new Document(length);
+			doc->doc_id = s[0];
 			int total = 0;
 			for(size_t i = 1; i < s.size(); i++){
 				std::vector<string> s1 = string_split(s[i], ":");
@@ -156,9 +158,10 @@ struct Model {
 	double** aa;		// new presenation of document
 
 	int n_threads;
+	string output_dir;
 
 public:
-	Model(Corpus* corpus, int EM_MAX_ITER, double EM_CONVERGED, int INF_MAX_ITER, double LAMBDA, int num_topics, int n_threads){
+	Model(Corpus* corpus, int EM_MAX_ITER, double EM_CONVERGED, int INF_MAX_ITER, double LAMBDA, int num_topics, int n_threads, string out){
         this->corpus = corpus;
 
 		this->EM_MAX_ITER = EM_MAX_ITER;
@@ -177,16 +180,16 @@ public:
         this->aa  			 = initialize_matrix(corpus->docs.size(), num_topics); //new presenation of documents
 
 		this->n_threads		 = n_threads;
-
+		this->output_dir 	 = out;
 	}
 
 	~Model(){
-		for (int i = 0; i < num_terms; ++i)
+		for (int i = 0; i < num_topics; ++i)
     		delete [] this->bb[i];
 		delete [] this->bb;
 
-		for (int i = 0; i < num_topics; ++i)
-    		delete [] this->aa[i];
+		for (size_t d = 0; d < corpus->docs.size(); ++d)
+    		delete [] this->aa[d];
 		delete [] this->aa;
 
 		delete this->mu;
@@ -216,7 +219,7 @@ public:
 
 			clock_t start = clock();
 
-			Parallel::Parallel pool = new Parallel::Parallel(n_threads);
+			Parallel::Parallel *pool = new Parallel::Parallel(n_threads);
 			pool->foreach(corpus->docs.begin(),corpus->docs.end(), [&](Document* doc){
 				doc_projection(doc);
 		  	});
@@ -242,9 +245,43 @@ public:
             i++; 	cout << "  **** iteration  "  << i << "jointProb: "<< jointProb << "****\n";
 		}
 
-
-
         cout << "Learning END..." ;
+	}
+
+	void save() {
+		cout << "Saving model.." << '\n';
+		FILE *fileptr;
+
+		string beta_final = output_dir + "/" + "beta.final";
+		fileptr = fopen(beta_final.c_str(), "w");
+		cout << "Open file " << beta_final << fileptr << endl;
+		cout << num_topics << " " << num_terms << endl;
+
+		std::cout << "bb: " << bb << sizeof(bb) << '\n';
+		if (bb == NULL) {
+			std::cout << "bb is nULL" << '\n';
+		}
+	    for (int i = 0; i < num_topics; i++) {
+	        for (int j = 0; j < num_terms; j++) {
+	            fprintf(fileptr, "%1.10f ", bb[i][j]);
+	        }
+	        fprintf(fileptr, "\n");
+	    }
+	    fclose(fileptr);
+
+
+		string theta_final = output_dir + "/" + "theta.final";
+		fileptr = fopen(theta_final.c_str(), "w");
+	    for (auto doc : corpus->docs) {
+			fprintf(fileptr, "%s\t", doc->doc_id.c_str());
+	        for (int j = 0; j < num_topics; j++) {
+	            fprintf(fileptr, "%1.10f ", doc->a[j]);
+	        }
+	        fprintf(fileptr, "\n");
+	    }
+	    fclose(fileptr);
+
+		std::cout << "Save model in " << output_dir <<'\n';
 	}
 
 	void M_step() {
@@ -600,7 +637,6 @@ public:
 				opt[i] += exp(theta[t]) * bb[t][doc->words[i]];
 			}
 		}
-
 		//Compute objective value and likelihood
 		double lkh = 0;
 		for (i = 0; i < doc->length; i++) {
@@ -618,8 +654,6 @@ public:
 	}
 
 };
-
-
 
 
 int main(int argc, char* argv[]) {
@@ -640,12 +674,14 @@ int main(int argc, char* argv[]) {
     int threads = pr.value.get<int>("CTM.threads");
     int num_topics =  pr.value.get<int>("CTM.n_topics");
 
+	string output_dir = pr.value.get<string>("CTM.output_dir");
 
     Corpus* corpus = new Corpus();
     corpus->read_data(location_data);
 
-    Model* model = new Model(corpus, EM_MAX_ITER, EM_CONVERGED, INF_MAX_ITER, LAMBDA, num_topics, threads);
+    Model* model = new Model(corpus, EM_MAX_ITER, EM_CONVERGED, INF_MAX_ITER, LAMBDA, num_topics, threads, output_dir);
     model->learn();
+	model->save();
 
     delete model;
     delete corpus;
