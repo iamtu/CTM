@@ -1,6 +1,8 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <string>
+
 #include <time.h>
 
 #include <gsl/gsl_vector.h>
@@ -243,16 +245,19 @@ public:
 
 
             i++; 	cout << "  **** iteration  "  << i << "jointProb: "<< jointProb << "****\n";
+			if ( i > 5 && i%10 == 0) {
+				save(i);
+			}
 		}
 
         cout << "Learning END..." ;
 	}
 
-	void save() {
-		cout << "Saving model.." << '\n';
+	void save(int iter) {
+		cout << "Saving model at iter.." << iter<< '\n';
 		FILE *fileptr;
 
-		string beta_final = output_dir + "/" + "beta.final";
+		string beta_final = output_dir + "/" + "beta.final.iter_ " + std::to_string(iter);
 		fileptr = fopen(beta_final.c_str(), "w");
 		cout << "Open file " << beta_final << fileptr << endl;
 		cout << num_topics << " " << num_terms << endl;
@@ -270,7 +275,8 @@ public:
 	    fclose(fileptr);
 
 
-		string theta_final = output_dir + "/" + "theta.final";
+		string theta_final = output_dir + "/" + "theta.final.iter_" + std::to_string(iter);
+
 		fileptr = fopen(theta_final.c_str(), "w");
 	    for (auto doc : corpus->docs) {
 			fprintf(fileptr, "%s\t", doc->doc_id.c_str());
@@ -681,7 +687,6 @@ int main(int argc, char* argv[]) {
 
     Model* model = new Model(corpus, EM_MAX_ITER, EM_CONVERGED, INF_MAX_ITER, LAMBDA, num_topics, threads, output_dir);
     model->learn();
-	model->save();
 
     delete model;
     delete corpus;
