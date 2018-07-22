@@ -1,0 +1,9 @@
+[CTM]
+location_data = "../grolier/grolier-train.txt"
+
+EM_MAX_ITER = 50
+EM_CONVERGED = 1e-3
+INF_MAX_ITER = 100
+LAMBDA = 100.0
+threads = 4
+n_topics = 50
