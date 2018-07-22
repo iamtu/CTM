@@ -216,23 +216,28 @@ public:
 
 			clock_t start = clock();
 
-			Parallel::Parallel pool(n_threads);
-			pool.foreach(corpus->docs.begin(),corpus->docs.end(), [&](Document* doc){
+			Parallel::Parallel pool = new Parallel::Parallel(n_threads);
+			pool->foreach(corpus->docs.begin(),corpus->docs.end(), [&](Document* doc){
 				doc_projection(doc);
 		  	});
 			for (auto d : corpus-> docs) {
 				jointProb += d->obj;
 			}
-
-			clock_t stop = clock();
-			double elapsed = (double)(stop - start) * 1000.0 / CLOCKS_PER_SEC;
-
-			cout << "E-step time: " << elapsed << " ms." << endl;
-
 			converge_joint = (jointProb - jointProb_old) / fabs(jointProb_old);
 			jointProb_old  = jointProb;
+			delete pool;
 
+			clock_t stop = clock();
+			double elapsed = (double)(stop - start) / CLOCKS_PER_SEC;
+			cout << "E-step time: " << elapsed << " s." << endl;
+
+
+			start = clock();
 			M_step();
+			stop = clock();
+			elapsed = (double)(stop - start) / CLOCKS_PER_SEC;
+			cout << "M-step time: " << elapsed << " s." << endl;
+
 
             i++; 	cout << "  **** iteration  "  << i << "jointProb: "<< jointProb << "****\n";
 		}
