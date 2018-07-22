@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <time.h>
 
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
@@ -63,7 +64,6 @@ public:
 	~Document(){
 		delete[] words;
 		delete[] counts;
-		delete[] a;
 	}
 };
 
@@ -214,18 +214,20 @@ public:
 
             jointProb = this->stat;
 
+			clock_t start = clock();
+
 			Parallel::Parallel pool(n_threads);
 			pool.foreach(corpus->docs.begin(),corpus->docs.end(), [&](Document* doc){
 				doc_projection(doc);
 		  	});
-
-			// for (size_t d = 0; d < corpus->docs.size(); d++) {
-    		// 	doc_projection(corpus->docs[d], aa[d]);
-    		// }
-
 			for (auto d : corpus-> docs) {
 				jointProb += d->obj;
 			}
+
+			clock_t stop = clock();
+			double elapsed = (double)(stop - start) * 1000.0 / CLOCKS_PER_SEC;
+
+			cout << "E-step time: " << elapsed << " ms." << endl;
 
 			converge_joint = (jointProb - jointProb_old) / fabs(jointProb_old);
 			jointProb_old  = jointProb;
