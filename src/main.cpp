@@ -208,6 +208,7 @@ public:
 	}
 
 	void learn(){
+
         cout << "Learning start...\n" ;
 		string log_file = output_dir + "/" + "log.txt";
 		FILE* fileptr = fopen(log_file.c_str(), "w");
@@ -235,7 +236,7 @@ public:
 			for (auto d : corpus-> docs) {
 				jointProb += d->obj;
 			}
-			converge_joint = (jointProb - jointProb_old) / fabs(jointProb_old);
+			converge_joint = fabs(jointProb - jointProb_old) / fabs(jointProb_old);
 			jointProb_old  = jointProb;
 			delete pool;
 
@@ -266,7 +267,7 @@ public:
 		cout << "Saving model at iter.." << iter<< '\n';
 		FILE *fileptr;
 
-		string beta_final = output_dir + "/" + "beta.final.iter_ " + std::to_string(iter);
+		string beta_final = output_dir + "/" + "beta.iter_ " + std::to_string(iter);
 		fileptr = fopen(beta_final.c_str(), "w");
 
 		if (bb == NULL) {
@@ -281,7 +282,7 @@ public:
 	    fclose(fileptr);
 
 
-		string theta_final = output_dir + "/" + "theta.final.iter_" + std::to_string(iter);
+		string theta_final = output_dir + "/" + "theta.iter_" + std::to_string(iter);
 
 		fileptr = fopen(theta_final.c_str(), "w");
 	    for (auto doc : corpus->docs) {
@@ -293,14 +294,14 @@ public:
 	    }
 	    fclose(fileptr);
 
-		string muy_final = output_dir + "/" + "muy.final.iter_" + std::to_string(iter);
+		string muy_final = output_dir + "/" + "muy.iter_" + std::to_string(iter);
 		fileptr = fopen(muy_final.c_str(), "w");
 		for(int i = 0; i < num_topics-1; i++){
 			fprintf(fileptr, "%1.10f ", mu[i]);
 		}
 	    fclose(fileptr);
 
-		string inv_sigma_final = output_dir + "/" + "inv_sigma.final.iter_" + std::to_string(iter);
+		string inv_sigma_final = output_dir + "/" + "inv_sigma.iter_" + std::to_string(iter);
 		fileptr = fopen(inv_sigma_final.c_str(), "w");
 		for(int i = 0; i < num_topics-1; i++){
 			for(int j = 0; j < num_topics-1; j++){
@@ -310,7 +311,7 @@ public:
 		}
 	    fclose(fileptr);
 
-		string docs_lkh = output_dir + "/" + "docs_lkh.final.iter_" + std::to_string(iter);
+		string docs_lkh = output_dir + "/" + "docs_lkh.iter_" + std::to_string(iter);
 		fileptr = fopen(docs_lkh.c_str(), "w");
 		for (auto doc : corpus->docs) {
 			fprintf(fileptr, "docID: %s - likelihood: %f\n", doc->doc_id.c_str(), doc->likelihood);
@@ -474,8 +475,9 @@ public:
 
     void initialize_M_step() {
         cout << "init M step " << endl;
+		srand(time(0));
 
-        int k, KK;
+		int k, KK;
         initialize_random_topics();
         KK = num_topics -1;
         for (k = 0; k < KK; k++) {

@@ -1,11 +1,11 @@
 [CTM]
-location_data = "../datasets/grolier/grolier-train.txt"
+location_data = "../datasets/enron/enron-train.txt"
 
-EM_MAX_ITER = 1
-EM_CONVERGED = 1e-4
+EM_MAX_ITER = 50
+EM_CONVERGED = 1e-6
 INF_MAX_ITER = 100
 LAMBDA = 100.0
 threads = 4
 n_topics = 50
 
-output_dir = "../models/grolier"
+output_dir = "../models/enron/timerun1"
