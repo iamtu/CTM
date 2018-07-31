@@ -2,14 +2,14 @@
 #include <iostream>
 #include <algorithm>
 #include <string>
+#include <random>
 
 #include <time.h>
-
+#include <math.h>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_eigen.h>
 
-#include <math.h>
 #include "toml.h"
 #include "parallel.h"
 
@@ -209,6 +209,9 @@ public:
 
 	void learn(){
         cout << "Learning start...\n" ;
+		string log_file = output_dir + "/" + "log.txt";
+		FILE* fileptr = fopen(log_file.c_str(), "w");
+
 		//run em
 		double jointProb_old = 0, converge_joint = 1;
         double jointProb;
@@ -219,7 +222,7 @@ public:
 		}
 
         int i = 0;
-		while (i < EM_MAX_ITER) {
+		while (i < EM_MAX_ITER && converge_joint > EM_CONVERGED) {
 
             jointProb = this->stat;
 
@@ -249,11 +252,13 @@ public:
 
 
             i++; 	cout << "  **** iteration  "  << i << "jointProb: "<< jointProb << "****\n";
-			if ( i > 5 && i%10 == 0) {
+			fprintf(fileptr, "iter: %d - jointProb: %1.10f\n", i, jointProb);
+			if ( i > 5 && i%10 == 1) {
 				save(i);
 			}
 		}
 
+		fclose(fileptr);
         cout << "Learning END..." ;
 	}
 
@@ -263,10 +268,7 @@ public:
 
 		string beta_final = output_dir + "/" + "beta.final.iter_ " + std::to_string(iter);
 		fileptr = fopen(beta_final.c_str(), "w");
-		cout << "Open file " << beta_final << fileptr << endl;
-		cout << num_topics << " " << num_terms << endl;
 
-		std::cout << "bb: " << bb << sizeof(bb) << '\n';
 		if (bb == NULL) {
 			std::cout << "bb is nULL" << '\n';
 		}
@@ -290,6 +292,31 @@ public:
 	        fprintf(fileptr, "\n");
 	    }
 	    fclose(fileptr);
+
+		string muy_final = output_dir + "/" + "muy.final.iter_" + std::to_string(iter);
+		fileptr = fopen(muy_final.c_str(), "w");
+		for(int i = 0; i < num_topics-1; i++){
+			fprintf(fileptr, "%1.10f ", mu[i]);
+		}
+	    fclose(fileptr);
+
+		string inv_sigma_final = output_dir + "/" + "inv_sigma.final.iter_" + std::to_string(iter);
+		fileptr = fopen(inv_sigma_final.c_str(), "w");
+		for(int i = 0; i < num_topics-1; i++){
+			for(int j = 0; j < num_topics-1; j++){
+				fprintf(fileptr, "%1.10f ", inv_sigma[i][j]);
+			}
+			fprintf(fileptr, "\n");
+		}
+	    fclose(fileptr);
+
+		string docs_lkh = output_dir + "/" + "docs_lkh.final.iter_" + std::to_string(iter);
+		fileptr = fopen(docs_lkh.c_str(), "w");
+		for (auto doc : corpus->docs) {
+			fprintf(fileptr, "docID: %s - likelihood: %f\n", doc->doc_id.c_str(), doc->likelihood);
+		}
+		fclose(fileptr);
+
 
 		std::cout << "Save model in " << output_dir <<'\n';
 	}
@@ -581,34 +608,31 @@ public:
 			theta[i] = EPS;
 		}
 
-        // locate the initial point to be a vertex
-		for (i = 0; i < num_topics; i++) {
-			theta[i] = alpha;
-			for (t = 0; t < doc->length; t++) {
-				opt[t] = bb[i][doc->words[t]];
-			}
-			sum = f_joint(doc, theta, opt);
-			if (i == 0 || (sum > fmax))	{
-				fmax = sum;	ind = i;
-			}
-			theta[i] = EPS;
-		}
 
+		std::random_device rand_dev;
+	    std::mt19937 generator(rand_dev());
+	    std::uniform_int_distribution<int>  distr_topic(0,num_topics-1);
 
+	    ind = distr_topic(generator);
 		theta[ind] = alpha;
-		obj_max = fmax;
+
+
 		for (i = 0; i < num_topics; i++) {
 			theta_max[i] = theta[i];
 		}
 		for (i = 0; i < doc->length; i++) {
 			opt[i] = bb[ind][doc->words[i]];
 		}
-        //online Frank Wolfe
-        double T[2];
-        T[0] = 1; T[1] = 0;
+
+		fmax = f_joint(doc, theta, opt);
+		obj_max = fmax;
+
+	    //online Frank Wolfe
+        double T[2]; T[0] = 1; T[1] = 0;
+		std::uniform_int_distribution<int>  distr_T(0,1);
 
 		for (t = 1; t < INF_MAX_ITER; t++) {
-			T[rand() % 2]++;	//pick a part of the objective function (0/1)
+			T[distr_T(generator)]++;	//pick a part of the objective function (0/1)
 			ind = -1;	//select the best direction
 			for (i = 0; i < num_topics; i++) {
 				sum = df_joint(doc, theta, opt, i, T);
