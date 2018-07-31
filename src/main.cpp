@@ -594,11 +594,10 @@ public:
 
     void doc_projection(Document *doc) {
 		//Maximizing f(x) over the simplex of topics, using Online Frank-Wolfe
-		double obj, obj_max, fmax, alpha, *opt, *theta_max, sum, EPS;
+		double obj, obj_max, fmax, alpha, *opt, sum, EPS;
 		int i, t, ind, no_improvement=0;
 
 		opt = new double [doc->length]; //opt_j = sum_k {theta_k * beta_kj}
-		theta_max = new double [num_topics];
 		double *theta = doc->a;
 
 
@@ -616,16 +615,9 @@ public:
 	    ind = distr_topic(generator);
 		theta[ind] = alpha;
 
-
-		for (i = 0; i < num_topics; i++) {
-			theta_max[i] = theta[i];
-		}
 		for (i = 0; i < doc->length; i++) {
 			opt[i] = bb[ind][doc->words[i]];
 		}
-
-		fmax = f_joint(doc, theta, opt);
-		obj_max = fmax;
 
 	    //online Frank Wolfe
         double T[2]; T[0] = 1; T[1] = 0;
@@ -648,23 +640,9 @@ public:
 			for (i = 0; i < doc->length; i++) {
 				opt[i] = (1-alpha) * opt[i] + alpha * bb[ind][doc->words[i]];
 			}
-			obj = f_joint(doc, theta, opt);
 
-			//keep the best
-			if (obj > obj_max) {
-				obj_max = obj;  no_improvement = 0;
-				for (i = 0; i < num_topics; i++) {
-					theta_max[i] = theta[i];
-				}
-			} else no_improvement++;
-			if (no_improvement > 20) {
-				break;
-			}
 		}
-		//Reset Theta
-		for (i = 0; i < num_topics; i++) {
-			theta[i] = theta_max[i];
-		}
+
 		for (i = 0; i < doc->length; i++) {
 			opt[i] = 0;
 			for (t = 0; t < num_topics; t++) {
@@ -683,7 +661,6 @@ public:
 		doc->likelihood = lkh;
 
 		delete opt;
-		delete theta_max;
 		return;
 	}
 
