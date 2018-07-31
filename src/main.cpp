@@ -163,7 +163,9 @@ struct Model {
 	string output_dir;
 
 public:
-	Model(Corpus* corpus, int EM_MAX_ITER, double EM_CONVERGED, int INF_MAX_ITER, double LAMBDA, int num_topics, int n_threads, string out){
+	Model(Corpus* corpus, int EM_MAX_ITER, double EM_CONVERGED, int INF_MAX_ITER,
+		double LAMBDA, int num_topics, int n_threads, string out)
+	{
         this->corpus = corpus;
 
 		this->EM_MAX_ITER = EM_MAX_ITER;
@@ -179,7 +181,9 @@ public:
         this->inv_sigma	 	 = initialize_matrix(num_topics -1, num_topics -1);
 		this->inv_sigma_sum  = new double [num_topics -1];
 
-        this->aa  			 = initialize_matrix(corpus->docs.size(), num_topics); //new presenation of documents
+        this->aa  			 = initialize_matrix(corpus->docs.size(), num_topics);
+		 						//new presenation of documents
+								// log theta
 
 		this->n_threads		 = n_threads;
 		this->output_dir 	 = out;
@@ -566,7 +570,7 @@ public:
 		double obj, obj_max, fmax, alpha, *opt, *theta_max, sum, EPS;
 		int i, t, ind, no_improvement=0;
 
-		opt = new double [doc->length];
+		opt = new double [doc->length]; //opt_j = sum_k {theta_k * beta_kj}
 		theta_max = new double [num_topics];
 		double *theta = doc->a;
 
