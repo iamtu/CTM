@@ -254,7 +254,7 @@ public:
 
             i++; 	cout << "  **** iteration  "  << i << "jointProb: "<< jointProb << "****\n";
 			fprintf(fileptr, "iter: %d - jointProb: %1.10f\n", i, jointProb);
-			if ( i > 5 && i%10 == 1) {
+			if ( i == 1 || (i > 5 && i%10 == 0) ) {
 				save(i);
 			}
 		}
