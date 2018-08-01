@@ -146,6 +146,7 @@ struct Model {
 	int EM_MAX_ITER;
 	int INF_MAX_ITER;
 	float LAMBDA;		// penalty on Tr(inv_sigma)
+	double p;
 
     double** bb;			//topics
     int num_topics;
@@ -164,7 +165,7 @@ struct Model {
 
 public:
 	Model(Corpus* corpus, int EM_MAX_ITER, double EM_CONVERGED, int INF_MAX_ITER,
-		double LAMBDA, int num_topics, int n_threads, string out)
+		double LAMBDA, int num_topics, double p, int n_threads, string out)
 	{
         this->corpus = corpus;
 
@@ -172,6 +173,7 @@ public:
 		this->EM_CONVERGED = EM_CONVERGED;
 		this->INF_MAX_ITER = INF_MAX_ITER;
 		this->LAMBDA = LAMBDA;
+		this->p = p;
 
         this->num_terms	     = corpus->num_terms;
         this->bb			 = initialize_matrix(num_topics, num_terms); //topics
@@ -559,7 +561,7 @@ public:
     	for (j = 0; j < doc->length; j++) {
     		dfx += doc->counts[j] * bb[ind][doc->words[j]] / x[j];
     	}
-    	dfx *= T[0];
+    	dfx *= T[0] / (1-p);
     	KK =num_topics -1;
     	sum = -1;
     	if (ind < KK) {
@@ -571,7 +573,7 @@ public:
     			sum += inv_sigma_sum[j] * (theta[j] -theta[KK] - mu[j]);
     		}
     	}
-    	dfx += T[1] * (sum / exp(theta[ind]));
+    	dfx += T[1]/(p)* (sum / exp(theta[ind]));
     	return (dfx);
     }
 
@@ -623,7 +625,7 @@ public:
 
 	    //online Frank Wolfe
         double T[2]; T[0] = 1; T[1] = 0;
-		std::uniform_int_distribution<int>  distr_T(0,1);
+		std::bernoulli_distribution distr_T(p);
 
 		for (t = 1; t < INF_MAX_ITER; t++) {
 			T[distr_T(generator)]++;	//pick a part of the objective function (0/1)
@@ -687,12 +689,13 @@ int main(int argc, char* argv[]) {
     int threads = pr.value.get<int>("CTM.threads");
     int num_topics =  pr.value.get<int>("CTM.n_topics");
 
+	double p =  pr.value.get<double>("CTM.p");
 	string output_dir = pr.value.get<string>("CTM.output_dir");
 
     Corpus* corpus = new Corpus();
     corpus->read_data(location_data);
 
-    Model* model = new Model(corpus, EM_MAX_ITER, EM_CONVERGED, INF_MAX_ITER, LAMBDA, num_topics, threads, output_dir);
+    Model* model = new Model(corpus, EM_MAX_ITER, EM_CONVERGED, INF_MAX_ITER, LAMBDA, num_topics, p, threads, output_dir);
     model->learn();
 
     delete model;

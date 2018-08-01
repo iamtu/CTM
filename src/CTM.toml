@@ -7,5 +7,5 @@ INF_MAX_ITER = 100
 LAMBDA = 100.0
 threads = 4
 n_topics = 50
-
+p = 0.1
 output_dir = "../models/enron/timerun1"
